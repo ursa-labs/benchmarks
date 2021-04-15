@@ -14,10 +14,6 @@ jobs:
         uses: actions/setup-python@v2
       - name: Setup R
         uses: r-lib/actions/setup-r@v1
-      - name: Lint (black)
-        uses: psf/black@stable
-        with:
-          args: ". --check"
       - name: Install Python dependencies
         run: |
           python setup.py develop
@@ -25,9 +21,17 @@ jobs:
           pip install -r requirements-build.txt
           pip install https://github.com/ursacomputing/conbench/archive/main.zip
           pip install coveralls
+      - name: Lint (black)
+        run: |
+          black . --check
       - name: Lint (flake8)
         run: |
           flake8
+      - name: Arrow for C++ benchmarks
+        run: |
+          git clone https://github.com/apache/arrow.git
+          pip install arrow/dev/archery
+          sudo apt-get install libjemalloc-dev libboost-dev libboost-filesystem-dev libboost-system-dev libboost-regex-dev
       - name: Install libcurl (for R arrow)
         run: |
           sudo apt-get -y install libssl-dev libcurl4-openssl-dev
@@ -41,7 +45,9 @@ jobs:
           LIBARROW_BINARY: TRUE
       - name: Run tests
         run: |
-          coverage run --source benchmarks -m pytest benchmarks/tests/
+          export ARROW_SRC=$(pwd)/arrow/
+          echo $ARROW_SRC
+          coverage run --source benchmarks -m pytest --run-slow benchmarks/tests/
       - name: Publish coverage
         run: |
           coveralls --service=github
